@@ -100,3 +100,25 @@ The Switch polls at most four datagrams per socket per iteration. Incoming datag
 The Switch disconnects after three failed GATT exchanges or ten seconds without acknowledgement progress on a nonempty outgoing queue. Each GATT read/write has a 1.5-second wait bound; native scan/connect calls may block separately. It checks native LDN state about once a second, emits LEFT on loss, and closes its sockets. B leaves LDN; + cleans up both transports. Counters are cumulative for the current Switch app process.
 
 RX counters count accepted source/size datagrams before the BLE queue decision; dropped includes invalid/oversize datagrams, queue overflow and receive errors. TX counts successful socket sends. Phone receive counts independently measure completed BLE delivery. A 1024-byte PING round trip and a 512-byte local UDP loopback measure these isolated paths, including scheduling and fragmentation; neither is a sustained throughput or gameplay benchmark.
+
+## Optional event batching (relay 0.1.1)
+
+The existing wire/codec version remains 1. CAPS byte 8 now advertises optional
+features; bit 0 (`RL_FEATURE_BATCH`) allows batched Switch-to-companion events.
+All other bits are reserved. Batching starts disabled for every BLE handshake.
+A new companion sends CONFIG (opcode 9) with a one-byte feature mask before
+SCAN; CONFIGURED (0x89) echoes the applied mask. An old companion never sends
+CONFIG and continues receiving the original individual events.
+
+When enabled, BATCH (0x8a, request ID zero) contains repeated
+`length:u16le | complete_message:length` records. Each message retains its
+original opcode, request ID and payload. Nested BATCH messages are invalid.
+Receivers must validate the entire envelope before delivering any records;
+codec-level sequence handling suppresses retransmitted envelopes. The envelope
+normally fits `negotiated_frame_limit - 16` bytes, so it takes one BLE frame.
+Messages that cannot fit are sent individually using normal fragmentation.
+CONFIGURED and other control replies may themselves arrive inside a batch.
+
+The Switch fills batches while draining UDP sockets and flushes at the next
+BLE exchange, without waiting to fill a timer-based batch. No UDP packet is
+split across batch records. UDP size and queue/drop limits remain unchanged.

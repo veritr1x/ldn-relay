@@ -23,7 +23,7 @@ its application protocol. This is a personal project, not affiliated with Ninten
 1. Open [Build NRO](https://github.com/veritr1x/ldn-relay/actions/workflows/build.yml).
 2. Select a successful run for the desired commit.
 3. Download the `ldn-relay-nro-<commit>` artifact and extract it.
-4. Copy `ldn-relay-v0.1.0.nro` to `/switch/ldn-relay/` on the modified Switch's SD card.
+4. Copy `ldn-relay-v0.1.1.nro` to `/switch/ldn-relay/` on the modified Switch's SD card.
 
 Each artifact includes the NRO, `SHA256SUMS`, a `build-info.json` identifying the
 source commit and toolchain, and licence notices. Downloading Actions artifacts
@@ -42,7 +42,7 @@ source is included; signed Apple applications and provisioning profiles are not.
 - The Mac or iPhone companion, open in the foreground with Bluetooth enabled.
   Only one companion should advertise at a time; the relay selects the first match.
 
-On the modified Switch, launch **LDN Relay 0.1.0** through Album and press **A**.
+On the modified Switch, launch **LDN Relay 0.1.1** through Album and press **A**.
 Bluetooth discovery and connection can take about 30 seconds. The companion
 automatically scans after the handshake. Choose the protocol, session passphrase
 and UDP port, then select the intended session. The included FRLG preset only
@@ -71,9 +71,24 @@ This version does not host LDN, expose TCP, tunnel raw Wi-Fi or provide an Inter
 proxy. Timing and throughput may limit game compatibility. The custom BLE service
 does not implement peer authentication; use it with trusted nearby devices.
 
+## Version 0.1.1: event batching
+
+A live emulator test exposed incoming UDP drops when game traffic started.
+Version 0.1.1 adds negotiated event batching: multiple small UDP datagrams and
+control replies share one BLE frame, preserving each packet's boundaries and
+order. Six 61-byte UDP payloads fit in one 500-byte frame instead of six
+separate exchanges. This increases capacity under a backlog; it does not
+remove the underlying GATT write/read round-trip latency.
+
+Updated companions enable batching through a capability flag and configuration
+command. Old companions continue receiving single messages. Large datagrams
+retain the existing fragmentation path. Sanitizer tests cover batch bounds,
+ordering, malformed envelopes and duplicate suppression. Physical throughput
+and a complete emulator trade with this version are still unverified.
+
 ## Hardware validation
 
-These results describe a short physical test, not CI or a gameplay compatibility claim.
+These results describe the original v0.1.0 short physical test, not CI or a gameplay compatibility claim.
 
 | Check | Result |
 | --- | --- |
@@ -107,7 +122,7 @@ The Switch build requires Docker and uses a devkitPro container pinned by digest
 sh build.sh
 ```
 
-Output: `build/ldn-relay-v0.1.0.nro`. The pinned image supplies libnx 4.12.0-1,
+Output: `build/ldn-relay-v0.1.1.nro`. The pinned image supplies libnx 4.12.0-1,
 devkitA64 r29.2-1 and switch-tools 1.13.1-1. The build runs without container
 network access after Docker retrieves the image. With an equivalent devkitPro
 installation, `make` can also build directly.

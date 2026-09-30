@@ -2,6 +2,7 @@
 #import <CoreBluetooth/CoreBluetooth.h>
 #import <TargetConditionals.h>
 #include "relay_protocol.h"
+#include "relay_batch.h"
 
 static NSString *const ServiceUUID = @"7B61238D-028A-4F65-99D8-7C8F22A11D4E";
 static NSString *const DataUUID = @"7B61238D-028A-4F65-99D8-7C8F22A11D4F";
@@ -209,8 +210,15 @@ static NSData *hexData(NSString *text) {
     if (n<3) return YES;
     uint16_t request=lr_get16(p+1);
     switch (p[0]) {
+    case RL_BATCH:
+        if(!lr_batch_receive(p,n,receive_message,(__bridge void *)self)) [self record:@"Rejected malformed batch envelope."];
+        return YES;
+    case RL_CONFIGURED:
+        if(n!=4)break;
+        [self record:(p[3]&RL_FEATURE_BATCH)?@"Relay event batching enabled.":@"Relay event batching disabled."];return YES;
     case RL_CAPS:
         if (n!=9 || p[3]!=LR_VERSION) break;
+        if(p[8]&RL_FEATURE_BATCH) {uint8_t flags=RL_FEATURE_BATCH;[self send:RL_CONFIG body:[NSData dataWithBytes:&flags length:1]];}
         self.ready=YES;self.status.text=@"Bluetooth connected · scan for a session";
         [self record:[NSString stringWithFormat:@"Relay ready: frame=%u, UDP limit=%u, sockets=%u",codec.frame_limit,lr_get16(p+5),p[7]]];[self scan];return YES;
     case RL_NETWORKS: {

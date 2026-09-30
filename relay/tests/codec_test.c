@@ -1,4 +1,5 @@
 #include "relay_codec.h"
+#include "relay_batch.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -39,7 +40,34 @@ static void exchange(uint16_t limit, bool wrap) {
     assert(a.malformed_frames+b.malformed_frames>0);
     assert(a.duplicate_frames+b.duplicate_frames>0);
 }
+static bool batch_sink(void *ctx,const uint8_t *p,size_t n) {
+    unsigned *count=ctx;assert(n==71 && p[0]==RL_UDP && p[10]==*count);++*count;return true;
+}
+static bool batch_envelope(void *ctx,const uint8_t *p,size_t n) {
+    return lr_batch_receive(p,n,batch_sink,ctx);
+}
+static void batches(void) {
+    LrBatch batch;lr_batch_init(&batch,500-LR_HEADER_SIZE);
+    uint8_t packet[71]={RL_UDP};unsigned count=0;
+    for(unsigned i=0;i<6;++i){packet[10]=(uint8_t)i;assert(lr_batch_add(&batch,packet,sizeof(packet)));}
+    size_t full=batch.size;assert(!lr_batch_add(&batch,packet,sizeof(packet)));assert(batch.size==full);
+    assert(batch.size+LR_HEADER_SIZE<=500);
+    uint8_t malformed[LR_MAX_MESSAGE];memcpy(malformed,batch.bytes,full);
+    lr_put16(malformed+3+5*73,72);assert(!lr_batch_receive(malformed,full,batch_sink,&count));assert(count==0);
+    memcpy(malformed,batch.bytes,full);malformed[5+5*73]=RL_BATCH;
+    assert(!lr_batch_receive(malformed,full,batch_sink,&count));assert(count==0);
+    static LrCodec a,b;lr_init(&a,500);lr_init(&b,500);assert(lr_enqueue(&a,batch.bytes,batch.size));
+    uint8_t wire[LR_MAX_FRAME];size_t n=lr_frame(&a,wire,sizeof(wire));
+    assert(lr_ingest(&b,wire,n,batch_envelope,&count));assert(count==6);
+    assert(lr_ingest(&b,wire,n,batch_envelope,&count));assert(count==6);
+    for(unsigned limit=4;limit<500;++limit){
+        lr_batch_init(&batch,limit);
+        if(lr_batch_add(&batch,packet,sizeof(packet)))assert(batch.size<=limit);
+    }
+    puts("PASS: six UDP events in one BLE frame, order, malformed/nested envelopes, atomic validation, duplicate suppression, MTU bounds");
+}
 int main(void){
+    batches();
     exchange(20,false);exchange(182,false);exchange(500,false);exchange(182,true);
     static LrCodec c;lr_init(&c,500);
     uint8_t p[LR_MAX_MESSAGE+1]={0};

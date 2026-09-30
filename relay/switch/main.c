@@ -9,6 +9,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include "relay_protocol.h"
+#include "relay_batch.h"
 #include "ble_link.inc"
 
 static LrCodec codec;
@@ -25,7 +26,19 @@ static uint64_t udp_rx,udp_tx,udp_dropped,rx_bytes,tx_bytes;
 static uint8_t command[LR_MAX_MESSAGE];
 static size_t command_size;
 
-static bool enqueue(const uint8_t *p,size_t n){return lr_enqueue(&codec,p,n);}
+static bool batch_enabled;
+static LrBatch batch;
+static bool flush_batch(void){
+    if(batch.size<=3)return true;
+    if(!lr_enqueue(&codec,batch.bytes,batch.size))return false;
+    lr_batch_init(&batch,codec.frame_limit-LR_HEADER_SIZE);return true;
+}
+static bool enqueue(const uint8_t *p,size_t n){
+    if(!batch_enabled)return lr_enqueue(&codec,p,n);
+    if(n+5>batch.limit){if(!flush_batch())return false;return lr_enqueue(&codec,p,n);}
+    if(lr_batch_add(&batch,p,n))return true;
+    return flush_batch() && lr_batch_add(&batch,p,n);
+}
 static void error_reply(uint16_t id,uint8_t opcode,uint8_t error,uint32_t detail){
     uint8_t p[10]={RL_ERROR};lr_put16(p+1,id);p[3]=opcode;p[4]=error;lr_put32(p+5,detail);
     if(!enqueue(p,9)) note("Control response queue full.");
@@ -75,9 +88,10 @@ static bool handshake(BleSession *b){
         uint16_t peer_limit=lr_get16(response+8);
         if(peer_limit<20 || peer_limit>limit)continue;
         lr_init(&codec,peer_limit);
+        batch_enabled=false;lr_batch_init(&batch,peer_limit-LR_HEADER_SIZE);
         note("Relay handshake OK; ATT MTU=%u frame_limit=%u",mtu,peer_limit);
         uint8_t caps[9]={RL_CAPS,0,0,LR_VERSION,0x0a};
-        lr_put16(caps+5,RELAY_MAX_UDP);caps[7]=RELAY_MAX_SOCKETS;caps[8]=0;enqueue(caps,sizeof(caps));
+        lr_put16(caps+5,RELAY_MAX_UDP);caps[7]=RELAY_MAX_SOCKETS;caps[8]=RL_FEATURE_BATCH;enqueue(caps,sizeof(caps));
         return true;
     }
     note("Relay companion handshake failed.");return false;
@@ -221,6 +235,11 @@ static void handle_command(void){
     case RL_SEND:send_udp(id,p,n);break;
     case RL_INFO:if(n || !joined)error_reply(id,op,RL_ERR_STATE,0);else emit_info(id);break;
     case RL_PING:command[0]=RL_PONG;enqueue(command,command_size);break;
+    case RL_CONFIG:
+        if(n!=1 || (p[0]&~RL_FEATURE_BATCH))error_reply(id,op,RL_ERR_FORMAT,0);
+        else if(!flush_batch())error_reply(id,op,RL_ERR_QUEUE,0);
+        else {batch_enabled=(p[0]&RL_FEATURE_BATCH)!=0;uint8_t out[4]={RL_CONFIGURED};lr_put16(out+1,id);out[3]=p[0];enqueue(out,sizeof(out));note("Event batching %s",batch_enabled?"enabled":"disabled");}
+        break;
     case RL_STATS:if(!n)counters(id);else error_reply(id,op,RL_ERR_FORMAT,0);break;
     default:error_reply(id,op,RL_ERR_UNSUPPORTED,0);break;
     }
@@ -230,7 +249,7 @@ static void poll_udp(void){
     if(!joined)return;
     for(unsigned slot=0;slot<RELAY_MAX_SOCKETS;slot++){
         if(sockets[slot]<0)continue;
-        for(unsigned burst=0;burst<4;burst++){
+        for(unsigned burst=0;burst<(batch_enabled?32u:4u);burst++){
             uint8_t packet[RELAY_MAX_UDP+1];struct sockaddr_in src={0};socklen_t slen=sizeof(src);
             ssize_t n=recvfrom(sockets[slot],packet,sizeof(packet),MSG_DONTWAIT,(struct sockaddr*)&src,&slen);
             if(n<0){if(errno!=EAGAIN && errno!=EWOULDBLOCK)udp_dropped++;break;}
@@ -248,6 +267,7 @@ static void relay_loop(BleSession *ble){
     while(running()){
         if(leave_requested){leave_requested=false;leave_ldn();uint8_t p[3]={RL_LEFT};enqueue(p,3);}
         poll_udp();
+        flush_batch();
         size_t out_size=lr_frame(&codec,out,sizeof(out)),in_size=0;
         if(!ble_exchange(ble,out,out_size,in,&in_size)){
             if(++failures>=3){note("BLE stopped responding; closing relay.");break;}continue;
