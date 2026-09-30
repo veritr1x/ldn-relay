@@ -218,8 +218,9 @@ static NSData *hexData(NSString *text) {
         [self record:(p[3]&RL_FEATURE_BATCH)?@"Relay event batching enabled.":@"Relay event batching disabled."];return YES;
     case RL_CAPS:
         if (n!=9 || p[3]!=LR_VERSION) break;
+        self.ready=YES;
         if(p[8]&RL_FEATURE_BATCH) {uint8_t flags=RL_FEATURE_BATCH;[self send:RL_CONFIG body:[NSData dataWithBytes:&flags length:1]];}
-        self.ready=YES;self.status.text=@"Bluetooth connected · scan for a session";
+        self.status.text=@"Bluetooth connected · scan for a session";
         [self record:[NSString stringWithFormat:@"Relay ready: frame=%u, UDP limit=%u, sockets=%u",codec.frame_limit,lr_get16(p+5),p[7]]];[self scan];return YES;
     case RL_NETWORKS: {
         if (n<7 || p[6]>RELAY_MAX_NETWORKS || n!=7u+p[6]*18u) break;
