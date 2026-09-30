@@ -62,7 +62,8 @@ shutil.copy2(nro, out / nro.name)
 for name in ("README.md", "LICENSE", "THIRD_PARTY.md"):
     shutil.copy2(root / name, out / name)
 shutil.copytree(root / "licenses", out / "licenses")
-shutil.copy2(root / "relay/PROTOCOL.md", out / "PROTOCOL.md")
+(out / "relay").mkdir()
+shutil.copy2(root / "relay/PROTOCOL.md", out / "relay/PROTOCOL.md")
 (out / "SHA256SUMS").write_text(f"{digest}  {nro.name}\n")
 record = {
     "version": version, "title": title, "file": nro.name,
