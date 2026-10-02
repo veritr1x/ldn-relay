@@ -1,0 +1,28 @@
+name: Relay problem
+description: Report a reproducible connection or transport problem without private data.
+title: ''
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: 'Do not attach ROMs, saves, keys, profiles, device IDs or raw captures. Read TROUBLESHOOTING.md first. Use SECURITY.md for sensitive reports.'
+  - type: textarea
+    id: versions
+    attributes:
+      label: Versions and setup
+      description: Relay/companion versions, console model/firmware, launch mode and phone/Mac OS. No serial numbers or device IDs.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps and expected result
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result and exact error
+      description: Include when it happened and a small redacted excerpt if useful.
+    validations:
+      required: true

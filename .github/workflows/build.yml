@@ -16,19 +16,38 @@ concurrency:
 
 jobs:
   codec-tests:
-    name: Codec tests (ASan and UBSan)
+    name: Privacy and transport tests (ASan and UBSan)
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Install host authentication test dependency
+        run: sudo apt-get update && sudo apt-get install -y libssl-dev
+      - name: Check publishable source privacy
+        run: python3 scripts/privacy_check.py
+      - name: Test release guards
+        run: python3 -m unittest discover -s scripts -p 'test_*.py'
+      - name: Test simulated BLE faults
+        run: make ble-lab-test HOST_CC=clang
       - name: Test framing and recovery
         run: make test HOST_CC=clang
 
+  apple-build:
+    name: Build generic Mac companion
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build and verify ad-hoc signature
+        run: python3 relay/mac/build.py
+
   build-nro:
     name: Build and package Switch NRO
-    needs: codec-tests
+    needs: [codec-tests, apple-build]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:

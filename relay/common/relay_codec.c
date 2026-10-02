@@ -29,7 +29,7 @@ bool lr_enqueue(LrCodec *c, const void *bytes, size_t size) {
     memcpy(m->bytes,bytes,size); m->size=(uint16_t)size; c->count++;
     return true;
 }
-size_t lr_frame(LrCodec *c, void *out, size_t capacity) {
+size_t lr_prepare(const LrCodec *c, void *out, size_t capacity) {
     if (capacity<c->frame_limit) return 0;
     uint8_t *p=out;
     memset(p,0,LR_HEADER_SIZE); p[0]='L';p[1]='R';p[2]=LR_VERSION;
@@ -39,13 +39,20 @@ size_t lr_frame(LrCodec *c, void *out, size_t capacity) {
         const LrMessage *m=&c->queue[c->head];
         part=m->size-c->tx_offset;
         if (part>(size_t)c->frame_limit-LR_HEADER_SIZE) part=c->frame_limit-LR_HEADER_SIZE;
-        c->tx_part=(uint16_t)part;
         p[3]=1;lr_put16(p+4,c->tx_seq);lr_put16(p+8,c->tx_offset);
         lr_put16(p+10,m->size);lr_put16(p+12,(uint16_t)part);
         memcpy(p+LR_HEADER_SIZE,m->bytes+c->tx_offset,part);
     }
     lr_put16(p+14,frame_crc(p,LR_HEADER_SIZE+part));
     return LR_HEADER_SIZE+part;
+}
+void lr_commit(LrCodec *c,const void *frame,size_t size) {
+    const uint8_t *p=frame;
+    if(size>=LR_HEADER_SIZE && p[3] && c->count && lr_get16(p+4)==c->tx_seq && lr_get16(p+8)==c->tx_offset)
+        c->tx_part=lr_get16(p+12);
+}
+size_t lr_frame(LrCodec *c,void *out,size_t capacity) {
+    size_t n=lr_prepare(c,out,capacity);if(n)lr_commit(c,out,n);return n;
 }
 bool lr_ingest(LrCodec *c, const void *frame, size_t size, LrReceive receive, void *ctx) {
     const uint8_t *p=frame;

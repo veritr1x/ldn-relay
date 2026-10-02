@@ -2,194 +2,150 @@
 
 [![Build NRO](https://github.com/veritr1x/ldn-relay/actions/workflows/build.yml/badge.svg)](https://github.com/veritr1x/ldn-relay/actions/workflows/build.yml)
 
-A homebrew UDP relay for a modified Nintendo Switch, controlled over Bluetooth
-LE by a Mac or iPhone companion.
+A generic homebrew UDP relay for a modified Nintendo Switch. App author: **veritrix**.
+Source and releases: [veritr1x/ldn-relay](https://github.com/veritr1x/ldn-relay).
 
 ```text
-Mac or iPhone  <-- Bluetooth LE -->  modified Switch  <-- native LDN -->  stock console
+Mac / iPhone companion <-- BLE --> modified Switch <-- native LDN --> stock console
+Mac companion          <-- USB --> modified Switch <-- native LDN --> stock console
 ```
 
-The Switch discovers and joins a selected local-wireless session, then forwards
-UDP datagrams. A companion can use this transport to implement a game's protocol
-or an emulator adapter. The Switch relay contains no game-specific passphrases.
+The relay discovers, joins or hosts native LDN sessions and forwards UDP packets.
+Game connection settings and application protocols belong to the companion.
+No ROM, save, game passphrase or Pia/RFU implementation is embedded in the NRO.
 
-**This is an experimental transport, not a finished multiplayer or trading app.**
-Pia, Pokémon trading and emulator integration are not implemented. Each game
-still needs compatible connection settings and a companion adapter that speaks
-its application protocol. This is a personal project, not affiliated with Nintendo.
+**0.5.0 is a preview, not a production-qualified release.** Local Switch approval and same-session read recovery are implemented.
+No pairing-key import is required. An approved connection and LDN scan passed
+on hardware; broader qualification remains. The earlier 20-reconnect result used
+the previous paired build. The read fallback cannot sustain
+62 packets/s in the measured synthetic test; recovery under game load remains
+unqualified. The user reports a successful trade on the key-free 0.5.0 setup
+and multiple successful trades on the previous game build. See
+[production readiness](PRODUCTION_READINESS.md) for the release gates.
+The [release checklist and capability backlog](TODO.md) separates first-release
+work from later expansion of the native LDN interface.
 
-## Download the NRO
+See the [installation guide](INSTALL.md), [compatibility matrix](COMPATIBILITY.md)
+and [troubleshooting](TROUBLESHOOTING.md) for setup and supported evidence.
 
-1. Open [Build NRO](https://github.com/veritr1x/ldn-relay/actions/workflows/build.yml).
-2. Select a successful run for the desired commit.
-3. Download the `ldn-relay-nro-<commit>` artifact and extract it.
-4. Copy `ldn-relay-v0.1.1.nro` to `/switch/ldn-relay/` on the modified Switch's SD card.
+## Install and run
 
-Each artifact includes the NRO, `SHA256SUMS`, a `build-info.json` identifying the
-source commit and toolchain, and licence notices. Downloading Actions artifacts
-requires a GitHub login; artifacts are retained for 30 days. A new run can be
-started with **Run workflow** by someone with repository write access.
+1. Use a modified original Switch, including OLED, with Homebrew Menu. Firmware
+   20 or later is required by the app; other combinations need qualification.
+2. Download a successful [Build NRO](https://github.com/veritr1x/ldn-relay/actions/workflows/build.yml)
+   artifact for the desired commit. Check `build-info.json` for its actual version
+   and source; the latest local work may not yet be on GitHub.
+3. Verify `SHA256SUMS`, then copy the NRO into `/switch/ldn-relay/` on the SD card.
+   Keep only the intended app version in that folder to avoid launching old builds.
+4. Launch through **Album / Applet Mode**. Full application mode can fail native
+   communication-ID checks.
+5. Open a matching approval-mode companion. No key import is needed; see
+   [Switch approval](PAIRING.md). Previous paired companions must be updated.
+6. **A** discovers a BLE companion. At the prompt, release A and press **A** again
+   to approve this connection, or **B** to reject. **X** starts USB for Mac.
+   During a session, **B** leaves LDN; **+** releases the session and exits.
 
-The NRO needs a companion app to select sessions and send packets. Companion
-source is included; signed Apple applications and provisioning profiles are not.
+BLE discovery can take about 30 seconds. Keep the Apple companion foreground,
+with its screen unlocked. Only one companion should advertise during setup:
+discovery selects the first matching service, then waits for your Switch approval.
+Approval applies only to that connection. It does not authenticate the companion
+cryptographically or encrypt traffic.
+Use the companion to select or create a session and configure its sockets.
+Native LDN can temporarily replace the Switch's normal Wi-Fi connection.
 
-## Requirements and use
+For USB, close DBI before running the relay, start the Mac USB helper, then the
+USB companion. The helper listens on `127.0.0.1:42387`. After a USB disconnect,
+restart USB mode, helper and companion. DBI is only needed to copy files.
 
-- A modified original Switch with Homebrew Menu and firmware 20 or later.
-- **Launch through Album / Applet Mode.** This is the tested context. Launching
-  under an unrelated full application did not satisfy its communication-ID check.
-- A nearby console hosting a compatible LDN session.
-- The Mac or iPhone companion, open in the foreground with Bluetooth enabled.
-  Only one companion should advertise at a time; the relay selects the first match.
+## Capabilities and limits
 
-On the modified Switch, launch **LDN Relay 0.1.1** through Album and press **A**.
-Bluetooth discovery and connection can take about 30 seconds. The companion
-automatically scans after the handshake. Choose the protocol, session passphrase
-and UDP port, then select the intended session. The included FRLG preset only
-supplies connection settings; it does not implement trading.
+- LDN protocol 1 or 3; station joining and access-point hosting.
+- Companion-provided communication ID, scene, version, passphrase and advertisement.
+- Four nonblocking UDP sockets, up to 1,400 bytes per datagram.
+- Destination restriction to the connected LDN network's members/broadcast.
+- BLE stream-v2 framing, batching, compact headers, bounded queues and counters;
+  per-connection Switch approval and same-session GATT read recovery.
+- USB transport for a Mac companion.
+- Explicit leave, timeout cleanup and reconnect controls.
 
-**Test BLE** performs an exact 1,024-byte echo. **Test UDP loopback** sends 512 bytes
-to the relay's own LDN address using socket 3, port 49152; it does not establish
-that another console received anything. **Read counters** reports accepted
-socket traffic, queue depth and drops. **Leave session** or Switch **B** closes
-LDN while retaining BLE; Switch **+** closes both transports and exits.
+No raw Wi-Fi injection, TCP relay or Internet proxy. No generic game compatibility
+is implied. Benchmark and radio-tuning commands require local diagnostic opt-in. Normal-use isolation remains part of
+release review. No cryptographic authentication is provided in approval mode.
 
-Native LDN can temporarily replace the modified Switch's normal Wi-Fi connection.
-The companion uses Bluetooth; the Mac does not need to inject Wi-Fi frames or use
-an external USB Wi-Fi adapter.
+## Validation status
 
-## What is implemented
+Local sanitizer tests cover framing, bounds, loss/reordering, duplicate delivery,
+backpressure, sequence wrap, compact packets, host configuration and USB framing.
+The simulated BLE laboratory exercises the real stream codec under modeled
+conditions; it cannot establish Switch driver behavior or radio capacity.
 
-- Native station-mode LDN protocol 1 or 3 with session discovery and selection.
-- Companion-supplied session passphrase and host communication version.
-- Four nonblocking UDP sockets, each supporting payloads up to 1,400 bytes.
-- Session metadata, including node addresses, delivered to the companion.
-- BLE fragmentation, acknowledgements, CRC, duplicate suppression and bounded queues.
-- Explicit leave, link-failure cleanup, queue-stall detection and counters.
+Hardware development has exercised native joining and hosting. A Mac USB trade
+was reported successful. iPhone-host BLE tests also exchanged a Pokémon, but
+post-save synchronization and later notification stalls required further fixes.
+The user subsequently confirmed multiple completed trades with the working game
+build. That is user-verified evidence for that setup. The game adapter lives in a
+separate project; the new approval-mode transport needs separate qualification. No
+supported-game matrix is published.
 
-This version does not host LDN, expose TCP, tunnel raw Wi-Fi or provide an Internet
-proxy. Timing and throughput may limit game compatibility. The custom BLE service
-does not implement peer authentication; use it with trusted nearby devices.
-
-## Version 0.1.1: event batching
-
-A live emulator test exposed incoming UDP drops when game traffic started.
-Version 0.1.1 adds negotiated event batching: multiple small UDP datagrams and
-control replies share one BLE frame, preserving each packet's boundaries and
-order. Six 61-byte UDP payloads fit in one 500-byte frame instead of six
-separate exchanges. This increases capacity under a backlog; it does not
-remove the underlying GATT write/read round-trip latency.
-
-Updated companions enable batching through a capability flag and configuration
-command. Old companions continue receiving single messages. Large datagrams
-retain the existing fragmentation path. Sanitizer tests cover batch bounds,
-ordering, malformed envelopes and duplicate suppression. Physical throughput
-and a complete emulator trade with this version are still unverified.
-
-## Hardware validation
-
-These results describe the original v0.1.0 short physical test, not CI or a gameplay compatibility claim.
-
-| Check | Result |
-| --- | --- |
-| Modified Switch launch | Album / Applet Mode on firmware 20.5.0 |
-| Stock peer | Switch 2 hosting FireRed/LeafGreen local wireless |
-| Mac companion | Version 0.1.1, native Apple Silicon Mac Catalyst |
-| Native session | Protocol 3, verified network identity, two connected nodes |
-| BLE | ATT MTU 512, 500-byte frames; 1,024-byte exact echo in 682.0 ms |
-| Incoming session UDP | Received by Mac; Switch counted 125 session datagrams over about 67 seconds |
-| UDP self-loopback | 512 bytes in 568.6 ms while joined |
-| Final relay counters | 126 received including loopback, 1 sent, 0 drops, empty queue |
-| Shutdown | Native LDN and BLE released cleanly |
-
-An earlier generic iPhone test passed a 1,024-byte BLE echo in 691.3 ms but did not
-join LDN. The updated iPhone 0.1.1 generic UDP path has not had that separate
-physical test. The iPhone process was stopped during the Mac test.
-
-Still pending: meaningful two-way traffic with the stock console, sustained load,
-disconnect/reconnect recovery, other games, and game/emulator adapters. A passing
-build or self-loopback does not establish any of these. The initial publication
-preserves the tested relay and companion source; personal device logs are not published.
-
-Known display issue: Switch prompts refer to a phone and the Mac packet counter
-says “Delivered to iPhone.” These refer to whichever companion is connected.
-
-## Build locally
-
-The Switch build requires Docker and uses a devkitPro container pinned by digest:
-
-```sh
-sh build.sh
-```
-
-Output: `build/ldn-relay-v0.1.1.nro`. The pinned image supplies libnx 4.12.0-1,
-devkitA64 r29.2-1 and switch-tools 1.13.1-1. The build runs without container
-network access after Docker retrieves the image. With an equivalent devkitPro
-installation, `make` can also build directly.
-
-Run the existing codec tests with a host C compiler supporting ASan and UBSan:
+## Build, test and package
 
 ```sh
 make test HOST_CC=clang
+make ble-lab-test HOST_CC=clang
+python3 scripts/privacy_check.py
+python3 -m unittest discover -s scripts -p 'test_*.py'
+sh build.sh
+python3 scripts/package.py --output build/release-0.5.0
 ```
 
-The tests cover bidirectional fragmentation, loss, corrupted frames, duplicate
-delivery, backpressure, queue bounds, sequence wrap and reset.
+`build.sh` uses a devkitPro container pinned by digest and disables its network
+while building. `make` also works with a compatible local devkitPro installation.
+Output: `build/ldn-relay-v0.5.0.nro`. Embedded title, author and version are
+validated before packaging. The package contains licences, documentation,
+checksums, source commit, dirty status and a source-file digest manifest.
+An existing output directory is never overwritten. Default package output is `dist/`.
 
-Package a committed checkout after building:
+CI tests and packages the checked-out commit. It does not run hardware tests.
+Actions artifacts require GitHub login and expire after 30 days; stable public
+release downloads and verified release tags remain production work.
 
-```sh
-python3 scripts/package.py
-```
+## Companions and development tools
 
-This validates the NRO and embedded assets, title and version before writing
-`dist/`. It refuses to mix files into a nonempty `dist/`; move the previous package
-first. GitHub Actions runs the codec tests, builds the NRO, validates it and
-uploads this directory on main pushes, version tags, pull requests and manual runs.
-
-## Companion builds
-
-For Apple Silicon macOS with Xcode and its Mac Catalyst SDK:
+Apple companion apps are developer tools requiring a local Xcode build; no signed
+app or provisioning profile is distributed here. Mac Catalyst requires Apple Silicon
+and macOS 14 or later; iPhone builds target iOS 17 or later.
 
 ```sh
 python3 relay/mac/build.py
-open 'build/relay-mac/LDN Relay Mac.app'
+python3 relay/ios/build.py --profile /path/to/development.mobileprovision
 ```
 
-The Mac build uses a local ad-hoc signature and requires no iOS provisioning
-profile. Deployment minimum is macOS 14; the hardware run used macOS 27.0.1.
-
-For an iPhone with Developer Mode and a valid wildcard development profile
-covering that device:
+The build prints its output path. For USB on Mac, install libusb and pkg-config:
 
 ```sh
-python3 relay/ios/build.py --profile /path/to/development.mobileprovision
-xcrun devicectl device install app --device DEVICE_ID build/relay-ios/LDNRelay.app
-xcrun devicectl device process launch --device DEVICE_ID dev.local.ldn-relay
+mkdir -p build
+clang -std=c17 -D_DARWIN_C_SOURCE -Wall -Wextra -Werror -Irelay/common $(pkg-config --cflags libusb-1.0) relay/usb/bridge.c relay/common/relay_codec.c $(pkg-config --libs libusb-1.0) -o build/ldn-relay-usb-bridge
 ```
 
-The iPhone build targets iOS 17 or later; the physical BLE test used iOS 27.
-Apple companions are built locally, not by the NRO workflow. Keep signing files
-and signed applications out of Git.
+See [wire protocol](relay/PROTOCOL.md), [simulated BLE lab](relay/sim/README.md)
+and [physical Mac/iPhone lab](relay/ble-lab/README.md). Those development documents
+are in the source checkout, not the NRO download. Game/emulator integration requires
+an adapter using the transport API; installing the NRO alone does not enable trading.
 
-## Protocol and development
+## Privacy and diagnostics
 
-See [relay/PROTOCOL.md](relay/PROTOCOL.md) for the wire format and flow control.
-`relay/switch/main.c` owns LDN/UDP; `relay/switch/ble_link.inc` owns BLE discovery;
-`relay/common/relay_codec.c` is shared by both endpoints. `relay/ios/main.m`
-provides the iPhone and Mac Catalyst UI.
+Switch persistent logging is **off by default**. For one diagnostic session,
+create `/switch/ldn-relay/diagnostics.enabled` before launch. Logs are written to
+`relay.log`, with one `relay.previous.log`, in the same directory. Each is capped
+at 256 KiB. Remove the flag to disable future file logging; existing logs remain
+local. Logging can affect performance. Old probe logs are not deleted automatically.
 
-Companion adapters can call `sendDatagram:slot:address:port:` and receive the
-`LDNRelayDatagram` notification (`slot`, source address, port, payload).
-`networkInfo` holds the received session metadata. These are in-process hooks,
-not an existing inter-app API; an emulator needs explicit integration.
+Apple companions and lab tools still produce local development logs. Review
+those before sharing. No logs, saves, device IDs or signing materials are packaged.
+See [privacy](PRIVACY.md). This project is not affiliated with Nintendo.
 
-Logs append to `sdmc:/switch/pokeldn-bridge-probe/relay-v0_1.log` on Switch
-(the historical path is retained), `Documents/relay.log` in the iPhone app,
-and `~/Library/Application Support/LDN Relay/relay.log` on Mac.
+## Licence
 
-## Licence and credits
-
-[MIT](LICENSE). Dependency notices and research references are in
-[THIRD_PARTY.md](THIRD_PARTY.md). This project was developed with AI assistance;
-the hardware results above are from physical-device tests.
+[MIT](LICENSE). Preserve [third-party notices](THIRD_PARTY.md) and `licenses/`.
+Git attribution uses the public [veritr1x](https://github.com/veritr1x) account's
+GitHub no-reply identity; the app's display author is `veritrix`.

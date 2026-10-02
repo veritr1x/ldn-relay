@@ -19,3 +19,12 @@ entitlements.plist
 .env.*
 __pycache__/
 .DS_Store
+
+# Private inputs and diagnostic recordings
+*.sav
+*.gba
+*.jsonl
+*.bundle
+*.pcap
+*.pcapng
+*.pklg

@@ -26,6 +26,8 @@ typedef bool (*LrReceive)(void *ctx, const uint8_t *bytes, size_t size);
 void lr_init(LrCodec *c, uint16_t frame_limit);
 bool lr_enqueue(LrCodec *c, const void *bytes, size_t size);
 size_t lr_frame(LrCodec *c, void *out, size_t capacity);
+size_t lr_prepare(const LrCodec *c, void *out, size_t capacity);
+void lr_commit(LrCodec *c, const void *frame, size_t size);
 bool lr_ingest(LrCodec *c, const void *frame, size_t size, LrReceive receive, void *ctx);
 uint16_t lr_get16(const uint8_t *p);
 uint32_t lr_get32(const uint8_t *p);
