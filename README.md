@@ -14,9 +14,12 @@ LDN is Nintendo's local-wireless networking. This relay can find, join and host
 LDN sessions, then forward UDP packets between the companion app and the consoles.
 
 **Version 0.5.0 is a preview.** Pokémon trades have been reported working with a
-separate mGBA companion. **That emulator is not included here.** This repository
+separate [mGBA LDN companion](https://github.com/veritr1x/mgba-ldn-ios).
+**That emulator is not included here.** This repository
 contains the Switch relay and generic iPhone/Mac tools for building and testing
 companions. Each game still needs an app that understands its protocol.
+The companion repo currently publishes an older protocol; its matching 0.5.0
+update is still pending.
 
 ## Get started
 
