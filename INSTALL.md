@@ -7,9 +7,10 @@ See [COMPATIBILITY.md](COMPATIBILITY.md) for tested devices and versions.
 ## Choose the companion
 
 - **Playing/trading:** use a matching game companion that implements the game's
-  protocol. The [mGBA LDN companion](https://github.com/veritr1x/mgba-ldn-ios)
-  is a separate project. Its published source still uses the older protocol;
-  the matching 0.5.0 update is pending. The generic app here cannot play or trade.
+  protocol. The [mGBA LDN companion](https://github.com/veritr1x/mgba-ldn-ios-macos)
+  is a separate project. Use its 0.6.0 preview or later for the matching
+  approval transport. Its Releases include an IPA for sideloading and a Mac app.
+  The generic app here cannot play or trade.
 - **Transport development:** the generic Apple companion in this repository can
   discover/join sessions and exercise UDP. Its game-session passphrase field is
   unrelated to BLE pairing. This release uses Switch approval without pairing keys.

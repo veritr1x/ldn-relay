@@ -23,9 +23,10 @@ bootloader or sysmodule update is included in the relay package.
 ## Match the companion version
 
 0.5.0 uses approval on the Switch. Both BLE endpoints must speak that format;
-older keyed companions cannot connect. The [mGBA game companion](https://github.com/veritr1x/mgba-ldn-ios)
-is a separate project. Its tested 0.5.0 changes are not published there yet;
-the current public source uses an older relay protocol.
+older keyed companions cannot connect. The [mGBA game companion](https://github.com/veritr1x/mgba-ldn-ios-macos)
+is a separate project. Its 0.6.0 preview includes the matching approval-mode
+transport from the tested 0.5.0 game build, with a simplified UI and release
+packaging. A new release-build trade is a separate hardware check.
 
 The [test results](PRODUCTION_READINESS.md) include the known disconnect error,
 older reconnect/recovery measurements and tests still to be completed. A successful
