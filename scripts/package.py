@@ -79,7 +79,7 @@ out.mkdir(parents=True, exist_ok=True)
 if any(out.iterdir()):
     raise SystemExit("Output directory must be empty; existing packages are never overwritten")
 shutil.copy2(nro, out / nro.name)
-for name in ("README.md", "LICENSE", "THIRD_PARTY.md", "PRODUCTION_READINESS.md", "PRIVACY.md", "PAIRING.md", "TODO.md", "INSTALL.md", "COMPATIBILITY.md", "TROUBLESHOOTING.md", "SECURITY.md", "CHANGELOG.md"):
+for name in ("README.md", "LICENSE", "THIRD_PARTY.md", "PRODUCTION_READINESS.md", "PRIVACY.md", "PAIRING.md", "TODO.md", "INSTALL.md", "COMPATIBILITY.md", "TROUBLESHOOTING.md", "SECURITY.md", "CHANGELOG.md", "CONTRIBUTING.md"):
     shutil.copy2(root / name, out / name)
 shutil.copytree(root / "licenses", out / "licenses")
 (out / "relay").mkdir()
@@ -92,7 +92,7 @@ record = {
     "release_status": "preview; hardware qualification incomplete",
     "source_url": f"https://github.com/veritr1x/ldn-relay/tree/{revision}",
     "validation": "NRO header, segment bounds, asset bounds, JPEG icon, NACP titles, author and version; privacy check",
-    "hardware_validation": "CI performs build and codec checks only; see README for prior hardware results",
+    "hardware_validation": "CI performs build and codec checks only; see PRODUCTION_READINESS.md for hardware results",
 }
 # Record the actual local source, including uncommitted work, without paths to
 # the developer machine. A commit SHA alone is insufficient for dirty builds.

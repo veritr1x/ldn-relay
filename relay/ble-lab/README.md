@@ -92,8 +92,9 @@ physical tests, the during-call ordinary echo delivered 1535/3720 at 62/s with
 still connected), an unchanged six-window/zero-pacing run delivered 3720/3720,
 zero drops/retries, median 64 ms and p95 127 ms. This supports audio contention
 as a contributor; it is not an isolated RF proof or a Switch measurement.
-See `build/ble-central/after-call-retry-ios-62.json` and its metadata. Preserve
-failed runs and distinguish connection failures from completed traffic tests.
+Those captures are private development records and are not included here. Keep
+failed runs when comparing changes, and distinguish connection failures from
+completed traffic tests.
 
 ### Independent bidirectional size-sample test
 

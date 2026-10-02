@@ -2,8 +2,7 @@
 
 This is a developer preview of a UDP relay, not a standalone Pokémon emulator.
 The NRO requires a modified original Switch; the other console can remain stock.
-Use [COMPATIBILITY.md](COMPATIBILITY.md) to distinguish tested combinations from
-build targets. Full LDN API coverage is not required to use the supported subset.
+See [COMPATIBILITY.md](COMPATIBILITY.md) for tested devices and versions.
 
 ## Choose the companion
 
@@ -20,8 +19,9 @@ an install-and-play package for general players.
 
 ## Switch
 
-1. Get a CI artifact for the exact source revision you intend to use. Public
-   release assets, when available, are linked on the repository's Releases page.
+1. Open [Build NRO](https://github.com/veritr1x/ldn-relay/actions/workflows/build.yml),
+   select a successful **main** run and download its `ldn-relay-nro-…` artifact.
+   Sign in to GitHub first. Artifacts expire after 30 days; use a recent run.
 2. Unzip it, inspect `build-info.json`, and run `shasum -a 256 -c SHA256SUMS`
    from the extracted directory on Mac (`sha256sum -c SHA256SUMS` on Linux).
 3. Back up an existing relay NRO, then copy `ldn-relay-v0.5.0.nro` into
@@ -46,7 +46,14 @@ wildcard profiles. It does not create certificates or register devices.
 Apple explains the signing model in [Provisioning Profiles](https://developer.apple.com/documentation/technotes/tn3125-inside-code-signing-provisioning-profiles)
 and [running on a physical device](https://developer.apple.com/documentation/xcode/running-your-app-on-simulated-or-physical-devices).
 
-From the source checkout:
+Clone the source first (also needed for the Mac instructions):
+
+```sh
+git clone https://github.com/veritr1x/ldn-relay.git
+cd ldn-relay
+```
+
+Then build and install:
 
 ```sh
 python3 relay/ios/build.py \
@@ -87,8 +94,8 @@ the Switch. The same BLE protocol is used on Mac and iPhone; their hardware
 qualification status is separate.
 
 The Switch also offers USB to a Mac companion. The generic app's default builder
-is BLE-only; a USB-capable companion and the helper described in the project
-README are needed. USB 0.5.0 lifecycle qualification remains pending.
+is BLE-only; a USB-capable companion and the helper described in
+[CONTRIBUTING.md](CONTRIBUTING.md#usb-on-mac) are needed. USB 0.5.0 lifecycle qualification remains pending.
 
 ## Updating and rolling back
 

@@ -1,34 +1,30 @@
-# Privacy and published identity
+# Privacy
 
-The Switch app displays `veritrix`. Git commits intentionally identify the public
-GitHub account `veritr1x`, using its GitHub-provided no-reply email. That public
-attribution is retained at the author's request; private email addresses and
-hardware identifiers are not required to build or use the relay.
+The Switch relay has no analytics or cloud upload endpoint. It uses `LDN Relay`
+as its network display name and does not read your Nintendo profile for that name.
+It shares session IP/MAC addresses and network IDs with the companion for routing.
 
-The NRO uses the generic LDN display name `LDN Relay`; it does not read the user's
-Nintendo profile for that name. Session IP/MAC addresses and network identifiers
-are exchanged with the connected companion because routing requires them. No
-analytics or cloud upload endpoint is part of the Switch relay.
+## Logs
 
-Persistent Switch logs are off by default. Creating
-`/switch/ldn-relay/diagnostics.enabled` opts in for the next launch. The app keeps
-`relay.log` and one previous session, each at most 256 KiB. Logs can contain local
-network addresses, system version, timing and error codes. They are not anonymous.
-Remove the flag to stop logging and delete the logs separately when no longer needed.
-Old diagnostic files in earlier probe directories are left untouched.
+Switch file logging is off by default. Create
+`/switch/ldn-relay/diagnostics.enabled` to turn it on for troubleshooting. The app
+keeps `relay.log` and `relay.previous.log`, each capped at 256 KiB. Remove the flag
+to stop logging; existing files remain until you delete them.
 
-Apple developer companions and physical benchmark tools can log local identifiers
-and deployment output. These tools are not packaged with the Switch NRO. Device
-IDs and provisioning profiles are explicit local arguments. Never publish signing
-profiles, device logs, packet captures, ROMs, saves or private recovery bundles.
+Logs can contain network addresses, system versions, timing and error codes.
+Apple developer apps and lab tools also write local logs and may include device
+identifiers. Review logs before sharing and post only the relevant redacted lines.
 
-The packaging allowlist includes only the NRO, documentation, licences and build
-manifests. Ignored build/results directories may contain private development
-artifacts; they are not uploaded. `scripts/privacy_check.py` is a guard against
-common accidental identifiers, not a complete personal-data or secret detector.
-Third-party licence attributions must remain intact.
+## Files and attribution
 
-Version 0.5.0 uses local Switch approval without pairing keys. Previous key files
-and Keychain entries are ignored and remain private rollback material. They must
-not be published. Approval does not authenticate or encrypt companion traffic.
-See [Switch approval](PAIRING.md).
+Downloads contain the NRO, documentation, licences, checksums and build manifests.
+They do not include ROMs, saves, signing profiles, device captures or pairing keys.
+Build and results directories are ignored by Git. The privacy checker catches
+common accidental identifiers; it is not a complete secret scanner.
+
+The Switch app's author is `veritrix`; commits use the public `veritr1x` GitHub
+identity. Third-party licence credits are preserved.
+
+0.5.0 no longer reads pairing keys. Older key files and Keychain entries remain
+local for rollback and can be removed when no longer needed. Approval itself does
+not authenticate or encrypt BLE traffic; see [PAIRING.md](PAIRING.md).

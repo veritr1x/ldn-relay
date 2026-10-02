@@ -5,7 +5,7 @@ Bluetooth or launching an emulator. Use this to compare scheduling, batching and
 retry changes against repeatable congestion conditions. It is a transport simulator,
 not a Nintendo OS/radio emulator. A local pass cannot establish a successful trade.
 
-## Run on this Mac
+## Run locally
 
 From the repository root:
 
@@ -24,7 +24,7 @@ The ctypes library uses warnings-as-errors but is not sanitizer-instrumented.
 Example experiments (build the library first):
 
 ```sh
-# Claude's proposed baseline, then 1.5x load, with asymmetric estimated sizes
+# Baseline and 1.5x load, with estimated asymmetric packet sizes
 python3 relay/sim/ble_lab.py --profile ble41 --set duration_ms=60000
 python3 relay/sim/ble_lab.py --profile ble41 --set duration_ms=60000 --set rate_switch=93 --set rate_apple=93
 # Suspected Switch last-event snapshot loss vs a FIFO with equally slow polling
@@ -41,13 +41,13 @@ All parameters in the output `config` can be overridden with `--set KEY=INTEGER`
 Use 0/1 for boolean settings. Profiles: `control`, `ble41`, `slow-callback`,
 `snapshot`, `overload`, `loss`, `stall`. The `control` profile deliberately provides
 unrealistic spare capacity to isolate software correctness. The `ble41` name describes
-its assumed 27-byte payload, **not a calibrated model of your OLED**.
+its assumed 27-byte payload, **not a calibrated model of a Switch**.
 
 ## What runs for real
 
 `stream_bridge.c` compiles the repository's `relay_stream.c` and `relay_codec.c`.
 Both simulated peers use its current eight-frame window, cumulative acknowledgements,
-ACK-based 150–1000 ms no-progress retry timer, fragmentation, receiver assembly and 24-message queue.
+adaptive ACK-based retry timer with backoff up to 2 seconds, fragmentation, receiver assembly and 24-message queue.
 Prepared frames are committed only after the simulated platform accepts them.
 Changing the actual stream code changes this experiment after rebuilding the library.
 Every delivered synthetic packet is checked for corruption and duplicate delivery.
@@ -90,14 +90,17 @@ and is split into `ceil((value_bytes + 7) / ll_payload)` data fragments.
 The successful USB run's sampled receive counters rose from 200 to 10,100 between
 21:56:06 and 21:58:45 (about 62.26/s). This is an observed average for that session,
 not its peak rate or necessarily unique, retransmission-free game traffic.
-See `build/hardware-run-06/USB-RESULT.md` and archived logs when available.
+That measurement came from a private development capture; the capture is not
+included in this repository.
 
 Default 62/s **in both directions**, 120-byte inbound UDP and 160-byte outbound Pia
-payloads are a scenario based on the supplied review. Only the incoming average is
+payloads are a modeled workload. Only the incoming average is
 supported by the sampled run; neither the outgoing rate nor these size distributions
 is measured here. Adding the existing 10-byte relay envelope makes records 130 and
 170 bytes; batches add 3 bytes plus 2 per record, and stream headers add 24 per frame.
-The current 500-byte stream frame therefore has 476 application bytes, not 484.
+A modeled 500-byte stream frame has 476 payload bytes. The current approval
+envelope limits the actual BLE inner frame to 472 bytes (448 after the stream
+header); this older model does not include that outer envelope.
 There is no complete timestamped packet trace in this lab.
 
 Connection interval, usable data fragments/event, controller queues and callback
@@ -120,7 +123,7 @@ is not a direct measurement of maximum link capacity.
 This lab has no legacy-mode negotiation/fallback, Pia reliable-window behavior,
 LDN session, radio capture or UI. Those need separate tests. In particular, the older
 review's stop-and-wait and missing outbound batching describe an earlier build;
-this lab exercises the current stream implementation.
+this lab exercises the stream implementation, not the current approval wrapper.
 
 ## Asymmetric window and scheduling comparisons
 

@@ -129,7 +129,7 @@ static NSData *hexData(NSString *text) {
     UILabel *title=[UILabel new];title.text=@"LDN Relay";title.font=[UIFont preferredFontForTextStyle:UIFontTextStyleLargeTitle];
     self.status=[UILabel new];self.status.numberOfLines=0;self.status.text=@"Starting Bluetooth…";
     UILabel *instructions=[UILabel new];instructions.numberOfLines=0;
-    instructions.text=@"Open LDN Relay through Album on your modified Switch, press A to find this app, then release and press A again at the approval prompt. Keep this app open. Sessions appear automatically after Bluetooth connects; tap your session to join.\n\nTransport tool · playing or trading requires a separate compatible game companion.";
+    instructions.text=@"Open LDN Relay through Album on your modified Switch, press A to find this app, then release and press A again at the approval prompt. Keep this app open. Sessions appear automatically after Bluetooth connects; tap your session to join.\n\nThis app tests the relay connection. To play or trade, use a compatible game companion.";
     self.protocolControl=[[UISegmentedControl alloc] initWithItems:@[@"Protocol 1",@"Protocol 3"]];self.protocolControl.selectedSegmentIndex=1;
     self.keyField=[UITextField new];self.keyField.borderStyle=UITextBorderStyleRoundedRect;self.keyField.placeholder=@"Game session passphrase (not a BLE pairing key)";
     self.keyField.autocapitalizationType=UITextAutocapitalizationTypeNone;self.keyField.autocorrectionType=UITextAutocorrectionTypeNo;
@@ -300,8 +300,8 @@ static NSData *hexData(NSString *text) {
         if (n!=9 || p[3]!=LR_VERSION) break;
         self.ready=YES;
         if(p[8]&RL_FEATURE_BATCH) {uint8_t flags=RL_FEATURE_BATCH;[self send:RL_CONFIG body:[NSData dataWithBytes:&flags length:1]];}
-        self.status.text=@"Bluetooth connected · scan for a session";
-        [self record:(p[8]&RL_FEATURE_USB)?@"USB relay active over cable.":(p[8]&RL_FEATURE_STREAM)?@"BLE stream-v2 active: eight frames in flight, bidirectional batching.":(p[8]&RL_FEATURE_NOTIFY)?@"BLE notify-v1 active (serial exchange).":@"BLE read-v1 active."];
+        self.status.text=@"Relay connected · scan for a session";
+        [self record:(p[8]&RL_FEATURE_USB)?@"USB relay active over cable.":(p[8]&RL_FEATURE_STREAM)?@"BLE stream-v2 active with bidirectional batching.":(p[8]&RL_FEATURE_NOTIFY)?@"BLE notify-v1 active (serial exchange).":@"BLE read-v1 active."];
         [self record:[NSString stringWithFormat:@"Relay ready: frame=%u, UDP limit=%u, sockets=%u",self.transport.frameLimit,lr_get16(p+5),p[7]]];NSNumber *autoRate=[[NSBundle mainBundle] objectForInfoDictionaryKey:@"LDNRelayAutoBenchmarkRate"];
         unsigned cycles=[[NSBundle.mainBundle objectForInfoDictionaryKey:@"LDNRelayReconnectCycles"] unsignedIntValue];
         if(cycles && !self.qualificationStopped && self.qualificationEchoes<=cycles){
@@ -365,7 +365,7 @@ static NSData *hexData(NSString *text) {
             self.oneWayIndex=[[NSBundle.mainBundle objectForInfoDictionaryKey:@"LDNRelayLDNOneWay"] boolValue]?0:2;self.oneWayActive=YES;self.paramRequested=NO;
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW,3*NSEC_PER_SEC),dispatch_get_main_queue(),^{[self runOneWay];});
         }
-        if (p[3]==0) { self.sessionBusy=NO;self.udpReady=YES;self.status.text=@"UDP relay ready · run both transport tests below";[self updateControls]; }
+        if (p[3]==0) { self.sessionBusy=NO;self.udpReady=YES;self.status.text=@"UDP relay ready";[self updateControls]; }
         if (p[3]==3 && request==self.udpBindRequest && self.udpExpected) {
             NSData *address=[self.networkInfo subdataWithRange:NSMakeRange(4,4)];
             [self sendDatagram:self.udpExpected slot:3 address:address port:49152];
@@ -378,7 +378,7 @@ static NSData *hexData(NSString *text) {
         if (n<10 || n>10+RELAY_MAX_UDP || p[3]>=RELAY_MAX_SOCKETS) break;
         if (!self.joined) return YES;
         self.udpReceived++;self.udpBytes+=n-10;
-        self.traffic.text=[NSString stringWithFormat:@"Delivered to iPhone: %lu UDP packets · %lu bytes",(unsigned long)self.udpReceived,(unsigned long)self.udpBytes];
+        self.traffic.text=[NSString stringWithFormat:@"Received: %lu UDP packets · %lu bytes",(unsigned long)self.udpReceived,(unsigned long)self.udpBytes];
         NSData *data=[NSData dataWithBytes:p+10 length:n-10];
         if (p[3]==3 && self.udpExpected && p[8]==0xc0 && !p[9] && !memcmp(p+4,(const uint8_t *)self.networkInfo.bytes+4,4)) {
             BOOL exact=[data isEqualToData:self.udpExpected];

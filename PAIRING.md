@@ -1,7 +1,6 @@
-# Switch approval (0.5.0 and later)
+# Switch approval (0.5.0)
 
-No pairing key, import file, PIN or Keychain entry is required. The user approves
-each BLE connection on the Switch. Install matching approval-mode versions of
+No pairing key, import file, PIN or Keychain entry is required. Approve each BLE connection on the Switch. Install matching approval-mode versions of
 the relay and companion; the older PSK builds are incompatible over BLE.
 
 1. Open the intended companion app, with Bluetooth enabled and the screen unlocked.
@@ -17,7 +16,7 @@ The Switch connects to the first matching BLE service and displays the approval
 prompt before exchanging relay setup or commands. It does not identify the person
 or app cryptographically. Physical approval authorizes that connection only.
 
-## Guarantees and limits
+## What approval means
 
 This mode provides **no cryptographic authentication, payload confidentiality or
 cryptographic tamper protection**. Session identifiers and counters prevent stale
