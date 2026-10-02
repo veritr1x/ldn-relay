@@ -45,6 +45,9 @@ for offset in (8, 24, 40):
 icon_offset, icon_size = assets[0]
 if icon_size == 0 or data[nro_size + icon_offset:nro_size + icon_offset + 2] != b"\xff\xd8":
     raise SystemExit("Missing JPEG icon")
+icon = data[nro_size + icon_offset:nro_size + icon_offset + icon_size]
+if icon != (root / "assets/icon.jpg").read_bytes():
+    raise SystemExit("NRO icon does not match the approved project artwork")
 nacp_offset, nacp_size = assets[1]
 if nacp_size != 0x4000:
     raise SystemExit("Invalid NACP size")
@@ -82,16 +85,17 @@ shutil.copy2(nro, out / nro.name)
 for name in ("README.md", "LICENSE", "THIRD_PARTY.md", "PRODUCTION_READINESS.md", "PRIVACY.md", "PAIRING.md", "TODO.md", "INSTALL.md", "COMPATIBILITY.md", "TROUBLESHOOTING.md", "SECURITY.md", "CHANGELOG.md", "CONTRIBUTING.md"):
     shutil.copy2(root / name, out / name)
 shutil.copytree(root / "licenses", out / "licenses")
+shutil.copytree(root / "assets", out / "assets")
 (out / "relay").mkdir()
 shutil.copy2(root / "relay/PROTOCOL.md", out / "relay/PROTOCOL.md")
 (out / "SHA256SUMS").write_text(f"{digest}  {nro.name}\n")
 record = {
     "version": version, "title": title, "author": author, "file": nro.name,
-    "size": len(data), "sha256": digest, "source_commit": revision,
+    "size": len(data), "sha256": digest, "icon_sha256": hashlib.sha256(icon).hexdigest(), "source_commit": revision,
     "source_dirty": dirty, "toolchain_image": toolchain,
     "release_status": "preview; hardware qualification incomplete",
     "source_url": f"https://github.com/veritr1x/ldn-relay/tree/{revision}",
-    "validation": "NRO header, segment bounds, asset bounds, JPEG icon, NACP titles, author and version; privacy check",
+    "validation": "NRO header, segment bounds, asset bounds, approved JPEG icon, NACP titles, author and version; privacy check",
     "hardware_validation": "CI performs build and codec checks only; see PRODUCTION_READINESS.md for hardware results",
 }
 # Record the actual local source, including uncommitted work, without paths to

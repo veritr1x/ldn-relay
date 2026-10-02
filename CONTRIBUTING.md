@@ -119,3 +119,16 @@ answer different questions.
 Keep ROMs, saves, profiles, keys, device IDs and raw captures out of Git. Share
 small redacted logs when needed. See [PRIVACY.md](PRIVACY.md) and
 [SECURITY.md](SECURITY.md). Preserve third-party licence notices.
+
+## Publishing a Switch download
+
+The embedded version in `relay/common/relay_protocol.h` must match the release
+tag. After the main-branch workflow passes, push a matching tag, for example
+`v0.5.0`. The tag workflow reruns tests, builds the NRO, verifies its icon, author
+and version, and publishes a GitHub preview release. Existing release assets
+are never replaced automatically; use a new version for a changed binary.
+
+The release contains the raw NRO, an install ZIP, `SHA256SUMS` and
+`build-info.json`. Packaging checks the artifact against the exact CI commit
+and verifies all checksums before publishing. The ZIP preserves the source
+manifest, licenses and installation documents.

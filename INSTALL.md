@@ -15,16 +15,16 @@ See [COMPATIBILITY.md](COMPATIBILITY.md) for tested devices and versions.
   discover/join sessions and exercise UDP. Its game-session passphrase field is
   unrelated to BLE pairing. This release uses Switch approval without pairing keys.
 
-Until a supported game companion is distributed, this repository is usable by
-companion developers and people building their own matching client. It is not
-an install-and-play package for general players.
+For gameplay, install the mGBA companion as well as this relay. The generic
+companion tools are intended for transport development.
 
 ## Switch
 
-1. Open [Build NRO](https://github.com/veritr1x/ldn-relay/actions/workflows/build.yml),
-   select a successful **main** run and download its `ldn-relay-nro-…` artifact.
-   Sign in to GitHub first. Artifacts expire after 30 days; use a recent run.
-2. Unzip it, inspect `build-info.json`, and run `shasum -a 256 -c SHA256SUMS`
+1. Download the **Switch ZIP** and `SHA256SUMS` from
+   [Releases](https://github.com/veritr1x/ldn-relay/releases). The raw NRO is also
+   available if you only need the executable. Check the download checksum before
+   extracting; the ZIP also contains checksums for its contents.
+2. Unzip it, inspect `build-info.json` for its source commit, and run `shasum -a 256 -c SHA256SUMS`
    from the extracted directory on Mac (`sha256sum -c SHA256SUMS` on Linux).
 3. Back up an existing relay NRO, then copy `ldn-relay-v0.5.0.nro` into
    `/switch/ldn-relay/` on the SD. Keep one active NRO to avoid version confusion.

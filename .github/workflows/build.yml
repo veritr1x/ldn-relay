@@ -65,3 +65,35 @@ jobs:
           path: dist/
           if-no-files-found: error
           retention-days: 30
+
+  release:
+    name: Publish Switch release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build-nro
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Download and verify this run's NRO
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          COMMIT: ${{ github.sha }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh run download "$RUN_ID" --name "ldn-relay-nro-$COMMIT" --dir dist
+          python3 scripts/release_assets.py dist dist-release --tag "$TAG" --commit "$COMMIT"
+      - name: Publish downloads
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$TAG" dist-release/* --verify-tag --prerelease \
+            --title "LDN Relay $TAG" --notes-file RELEASE.md

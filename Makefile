@@ -34,8 +34,8 @@ build/ldn-relay.elf: build/relay-main.o build/relay-codec.o build/relay-stream.o
 build/ldn-relay.nacp: Makefile relay/common/relay_protocol.h | build
 	$(NXTOOLS)/nacptool --create 'LDN Relay' 'veritrix' '$(VERSION)' $@
 
-build/ldn-relay-v$(VERSION).nro: build/ldn-relay.elf build/ldn-relay.nacp
-	$(NXTOOLS)/elf2nro $< $@ --nacp=build/ldn-relay.nacp --icon=$(DEVKITPRO)/libnx/default_icon.jpg
+build/ldn-relay-v$(VERSION).nro: build/ldn-relay.elf build/ldn-relay.nacp assets/icon.jpg
+	$(NXTOOLS)/elf2nro $< $@ --nacp=build/ldn-relay.nacp --icon=assets/icon.jpg
 
 build/relay-codec-test: relay/common/relay_codec.c relay/tests/codec_test.c relay/common/relay_codec.h relay/common/relay_batch.h Makefile | build
 	$(HOST_CC) $(HOST_CFLAGS) -Irelay/common relay/common/relay_codec.c relay/tests/codec_test.c -o $@

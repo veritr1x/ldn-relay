@@ -1,5 +1,7 @@
 # LDN Relay
 
+<img src="assets/icon.jpg" alt="LDN Relay icon" width="128" height="128">
+
 [![Build](https://github.com/veritr1x/ldn-relay/actions/workflows/build.yml/badge.svg)](https://github.com/veritr1x/ldn-relay/actions/workflows/build.yml)
 
 Use a modified Nintendo Switch to connect an iPhone or Mac app to a nearby
@@ -27,10 +29,9 @@ provides iOS and Apple silicon Mac downloads in its
 You need a modified original Switch (OLED included), firmware 20 or later,
 Homebrew Menu, and a matching companion app. See the [tested setups](COMPATIBILITY.md).
 
-1. Open [Build NRO](https://github.com/veritr1x/ldn-relay/actions/workflows/build.yml),
-   choose a successful **main** run and download its `ldn-relay-nro-…` artifact.
-   GitHub requires you to sign in to download artifacts.
-2. Unzip it, verify `SHA256SUMS`, and copy `ldn-relay-v0.5.0.nro` to
+1. Download the NRO or **Switch ZIP** from [Releases](https://github.com/veritr1x/ldn-relay/releases).
+   The ZIP includes instructions, licenses and build information.
+2. Verify `SHA256SUMS` (unzip the ZIP if used), and copy `ldn-relay-v0.5.0.nro` to
    `/switch/ldn-relay/` on the SD card.
 3. Open your companion app and keep it on screen. Launch the relay through
    **Album / Applet Mode** on the Switch.
@@ -52,6 +53,10 @@ git clone https://github.com/veritr1x/ldn-relay.git
 cd ldn-relay
 sh build.sh
 ```
+
+CI builds an NRO for every main-branch update and pull request. Pushing a `v…` tag
+that matches the embedded version publishes a preview release after all checks
+pass. Development builds remain available as Actions artifacts.
 
 The NRO is written to `build/ldn-relay-v0.5.0.nro`. The build uses a pinned
 [devkitPro](https://devkitpro.org/) toolchain.
