@@ -11,7 +11,16 @@ static void note(const char *fmt, ...) {
     va_list ap, copy;
     va_start(ap, fmt); va_copy(copy, ap);
     vprintf(fmt, ap); putchar('\n');
-    if (log_file) { vfprintf(log_file, fmt, copy); fputc('\n', log_file); fflush(log_file); }
+    if (log_file) {
+        long at=ftell(log_file);
+        if(at>=0 && at<256*1024){
+            char line[1024];int n=vsnprintf(line,sizeof(line),fmt,copy);
+            if(n>0){size_t size=(size_t)n<sizeof(line)?(size_t)n:sizeof(line)-1;
+                size_t left=256*1024-(size_t)at;if(size>left)size=left;
+                fwrite(line,1,size,log_file);if(size<left)fputc('\n',log_file);fflush(log_file);
+            }
+        }
+    }
     va_end(copy); va_end(ap); consoleUpdate(NULL);
 }
 static bool result(const char *name, Result rc) {
@@ -39,12 +48,14 @@ typedef struct {
     bool initialized, scanning, connected;
     bool scan_event_ok, connection_event_ok, discovery_event_ok, gatt_event_ok;
     bool service_registered, char_registered, characteristic_ok, direct_gatt;
+    bool notify_registered, notify_active, streaming, read_recovery;
     Event scan_event, connection_event, discovery_event, gatt_event;
     BtdrvGattAttributeUuid service_uuid, char_uuid;
     BtdrvAddress address;
     u32 handle;
     BtdevGattService service;
     BtdevGattCharacteristic characteristic;
+    LrApprovedSession session;
 } BleSession;
 
 static void dump_attribute(const char *label, const void *data, size_t size) {
@@ -57,6 +68,12 @@ static void dump_attribute(const char *label, const void *data, size_t size) {
 }
 
 static void release_ble(BleSession *b) {
+    if (b->notify_registered) {
+        BtdrvGattId service={.instance_id=b->service.instance_id,.uuid=b->service.attr.uuid};
+        BtdrvGattId attr={.instance_id=b->characteristic.instance_id,.uuid=b->characteristic.attr.uuid};
+        result("deregister BLE notifications",btLeClientDeregisterNotification(b->handle,b->service.primary_service,&service,&attr));
+        b->notify_registered=b->notify_active=false;
+    }
     if (b->connected) result("btdevDisconnectFromGattServer", btdevDisconnectFromGattServer(b->handle));
     if (b->char_registered) result("unregister characteristic path", btdevUnregisterGattOperationNotification(&b->char_uuid));
     if (b->service_registered) result("unregister service path", btdevUnregisterGattOperationNotification(&b->service_uuid));
@@ -90,7 +107,7 @@ static bool discover_phone(BleSession *b) {
         b->scanning = false;
         if (found) return true;
     }
-    note("No companion discovered. Keep the iPhone app open and advertising.");
+    note("No companion discovered. Keep the companion app open and advertising.");
     return false;
 }
 
@@ -166,8 +183,24 @@ static bool prepare_ble(BleSession *b) {
         note("Unexpected instance ID; refusing to truncate it."); return false;
     }
     b->direct_gatt = (b->characteristic.properties & 0x0a) != 0x0a;
-    if (b->direct_gatt) note("Metadata disagrees with our iPhone read/write service. Testing explicit bt requests; keeping reported properties unchanged.");
+    if (b->direct_gatt) note("Metadata disagrees with the companion read/write service. Testing explicit bt requests; keeping reported properties unchanged.");
     return true;
+}
+
+/* Every connection, including diagnostic reconnects, needs a fresh local press.
+ * No handshake or relay command is exchanged before approval. */
+static bool approve_companion(void){
+    note("Companion found. Approve this connection? Release A, then press A to approve; B rejects; + exits.");
+    note("Keep only your intended companion app open. Approval expires in 60 seconds.");
+    LrApprovalGate gate;lp_gate_start(&gate,armTicksToNs(armGetSystemTick())/1000000);
+    while(running()){
+        u64 buttons=padGetButtonsDown(&pad),held=padGetButtons(&pad);
+        bool approved=lp_gate_poll(&gate,armTicksToNs(armGetSystemTick())/1000000,
+            (buttons&HidNpadButton_A)!=0,(held&HidNpadButton_A)!=0,leave_requested);
+        if(gate.closed){note(approved?"Connection approved on Switch.":"Connection rejected or approval timed out.");leave_requested=false;return approved;}
+        svcSleepThread(10000000LL);
+    }
+    return false;
 }
 
 static bool relevant(const BtdrvLeEventInfo *e, const BtdrvGattAttributeUuid *uuid) {

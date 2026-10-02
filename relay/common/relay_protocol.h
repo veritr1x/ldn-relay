@@ -2,7 +2,7 @@
 #define RELAY_PROTOCOL_H
 #include "relay_codec.h"
 
-#define RELAY_VERSION "0.1.1"
+#define RELAY_VERSION "0.5.0"
 #define RELAY_MAX_UDP 1400
 #define RELAY_MAX_SOCKETS 4
 #define RELAY_MAX_NETWORKS 24
@@ -10,16 +10,26 @@
 /* Messages begin opcode:u8 request_id:u16le, followed by opcode-specific data.
  * IPv4 bytes and UDP ports use network order; other integers little-endian. */
 enum {
+    RL_DIAG_RECONNECT=0x7b,
     RL_SCAN=1, RL_JOIN=2, RL_LEAVE=3, RL_BIND=4, RL_SEND=5,
-    RL_INFO=6, RL_PING=7, RL_STATS=8, RL_CONFIG=9,
+    RL_COMPACT_ENABLE=11, RL_SEND_COMPACT=12, RL_HOST=13, RL_ADVERTISE=14,
+    RL_INFO=6, RL_PING=7, RL_STATS=8, RL_CONFIG=9, RL_BENCH=10,
     RL_CAPS=0x80, RL_NETWORKS=0x81, RL_CONNECTED=0x82,
     RL_LEFT=0x83, RL_BOUND=0x84, RL_SENT=0x85, RL_UDP=0x86,
-    RL_PONG=0x87, RL_COUNTERS=0x88, RL_CONFIGURED=0x89, RL_BATCH=0x8a, RL_ERROR=0xff
+    RL_PONG=0x87, RL_COUNTERS=0x88, RL_CONFIGURED=0x89, RL_BATCH=0x8a, RL_BENCH_DATA=0x8b, RL_BENCH_DONE=0x8c, RL_COMPACT_READY=0x8d, RL_UDP_COMPACT=0x8e, RL_HOSTED=0x8f, RL_MEMBERS=0x93, RL_ADVERTISED=0x94, RL_ERROR=0xff
 };
 enum {
     RL_ERR_FORMAT=1, RL_ERR_STATE=2, RL_ERR_UNSUPPORTED=3,
     RL_ERR_NATIVE=4, RL_ERR_SOCKET=5, RL_ERR_QUEUE=6,
     RL_ERR_STALE=7, RL_ERR_DESTINATION=8
 };
+#define RL_FEATURE_HOST 128
+#define RL_FEATURE_COMPACT 64
 #define RL_FEATURE_BATCH 1
+/* CAPS-only: the notification/write-without-response probe succeeded. */
+#define RL_FEATURE_NOTIFY 2
+#define RL_FEATURE_USB 32
+#define RL_FEATURE_STREAM 4
+#define RL_FEATURE_SEND_BATCH 8
+#define RL_FEATURE_QUIET_SEND 16
 #endif
